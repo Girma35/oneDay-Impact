@@ -1,0 +1,24 @@
+{
+  "@@locale": "en",
+  "appName": "OneDay",
+  "@appName": {
+    "description": "The name of the application"
+  },
+  "welcomeMessage": "Good morning, {name}!",
+  "@welcomeMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "streakCount": "Day {days} of your streak 🔥",
+  "@streakCount": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "startStreak": "Start Your Streak 🔥"
+}

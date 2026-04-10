@@ -1,0 +1,66 @@
+name: one_day
+description: A daily habit app for real community good.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  
+  # State Management
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.5
+  
+  # Dependency Injection
+  get_it: ^9.2.1
+  injectable: ^2.3.2
+  
+  # Backend (Firebase)
+  firebase_core: ^4.6.0
+  firebase_auth: ^6.3.0
+  cloud_firestore: ^6.2.0
+  firebase_storage: ^13.2.0
+  
+  # AI & Networking
+  google_generative_ai: ^0.4.5
+  dio: ^5.3.2
+  
+  # UI & UX
+  google_fonts: ^8.0.2
+  flutter_animate: ^4.2.0
+  lottie: ^3.3.2
+  cached_network_image: ^3.3.0
+  font_awesome_flutter: ^11.0.0
+  
+  # Utils
+  intl: ^0.20.2
+  path_provider: ^2.1.1
+  image_picker: ^1.0.4
+  flutter_dotenv: ^5.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  injectable_generator: ^2.4.1
+  build_runner: ^2.4.6
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/images/
+    - assets/fonts/
+    - assets/translations/
+  
+#  fonts:
+#    - family: Outfit
+#      fonts:
+#        - asset: assets/fonts/Outfit-Regular.ttf
+#        - asset: assets/fonts/Outfit-Bold.ttf
+#          weight: 700
