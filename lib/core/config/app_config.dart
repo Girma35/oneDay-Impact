@@ -6,12 +6,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppConfig {
   AppConfig._();
 
-  /// Primary Gemini API key
-  static String get geminiApiKey => dotenv.get('GEMINI_API_KEY', fallback: '');
+  /// Hugging Face API key
+  static String get hfApiKey => dotenv.get('HF_API_KEY', fallback: '');
 
-  /// Fallback key used when the primary hits a quota / 429 error
-  static String get geminiApiKey2 => dotenv.get('GEMINI_API_KEY_2', fallback: '');
-
-  /// The Gemini model to use for verification
-  static const String geminiModel = 'gemini-2.5-flash';
+  /// The Hugging Face model to use for verification
+  static const String hfModel = 'google/vit-base-patch16-224';  // Confirmed ACTIVE on Free Tier
 }

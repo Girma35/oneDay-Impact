@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:one_day/features/challenge/presentation/pages/challenge_feed_page.dart';
 import 'package:one_day/features/impact/presentation/pages/impact_page.dart';
+import 'package:one_day/features/profile/presentation/pages/profile_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -15,8 +16,7 @@ class _MainPageState extends State<MainPage> {
   static const List<Widget> _pages = [
     ChallengeFeedPage(),
     ImpactPage(),
-    // Placeholder for profile
-    Scaffold(body: Center(child: Text('Profile'))),
+    ProfilePage(),
   ];
 
   @override

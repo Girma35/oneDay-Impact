@@ -4,8 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:one_day/features/challenge/presentation/bloc/verification_bloc.dart';
-import 'package:one_day/features/challenge/data/repositories/gemini_verification_repository.dart';
+import 'package:one_day/features/challenge/data/repositories/hf_verification_repository.dart';
 import 'package:one_day/features/challenge/domain/entities/challenge.dart';
+import 'package:one_day/features/challenge/domain/repositories/verification_repository.dart';
 import 'dart:io';
 
 class ChallengeDetailsPage extends StatelessWidget {
@@ -15,70 +16,71 @@ class ChallengeDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      // No apiKey argument needed — GeminiVerificationRepository reads
-      // it from AppConfig (injected via --dart-define at build time).
-      create: (context) => VerificationBloc(
-        repository: GeminiVerificationRepository(),
-      ),
-      child: BlocConsumer<VerificationBloc, VerificationState>(
-        listener: (context, state) {
-          if (state is VerificationSuccess) {
-            _showResultDialog(context, state.isVerified);
-          } else if (state is VerificationFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${state.message}'),
-                backgroundColor: Colors.red[700],
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Stack(
-            children: [
-              _buildScaffold(context),
-              // Full-screen loading overlay while Gemini is working
-              if (state is VerificationLoading)
-                Container(
-                  color: Colors.black.withOpacity(0.55),
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 20),
-                          Text(
-                            'AI is verifying\nyour action…',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+    return RepositoryProvider<VerificationRepository>(
+      create: (context) => HFVerificationRepository(),
+      child: BlocProvider(
+        create: (context) => VerificationBloc(
+          repository: context.read<VerificationRepository>(),
+        ),
+        child: BlocConsumer<VerificationBloc, VerificationState>(
+          listener: (context, state) {
+            if (state is VerificationSuccess) {
+              _showResultDialog(context, state.isVerified);
+            } else if (state is VerificationFailure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error: ${state.message}'),
+                  backgroundColor: Colors.red[700],
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Stack(
+              children: [
+                _buildScaffold(context),
+                // Full-screen loading overlay while AI is working
+                if (state is VerificationLoading)
+                  Container(
+                    color: Colors.black.withOpacity(0.55),
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 20),
+                            Text(
+                              'AI is verifying\nyour action…',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Powered by Gemini',
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              color: Colors.grey,
+                            const SizedBox(height: 8),
+                            Text(
+                              'Powered by Hugging Face',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -177,7 +179,7 @@ class ChallengeDetailsPage extends StatelessWidget {
                                 style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                               ),
                               Text(
-                                'Gemini will analyse your photo to confirm you completed the challenge.',
+                                'AI will analyse your photo to confirm you completed the challenge.',
                                 style: GoogleFonts.outfit(
                                   fontSize: 12,
                                   color: Colors.black54,
@@ -212,10 +214,11 @@ class ChallengeDetailsPage extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 40,
@@ -259,6 +262,7 @@ class ChallengeDetailsPage extends StatelessWidget {
               const SizedBox(height: 16),
             ],
           ),
+        ),
         );
       },
     );
@@ -297,7 +301,7 @@ class ChallengeDetailsPage extends StatelessWidget {
         content: Text(
           success
               ? 'Amazing work! You earned ${challenge.impactPoints} impact points.'
-              : 'Gemini couldn\'t confirm the challenge from this photo. '
+              : 'AI couldn\'t confirm the challenge from this photo. '
                 'Try again with a clearer image showing your action.',
           style: GoogleFonts.outfit(height: 1.5),
         ),
