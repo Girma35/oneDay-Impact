@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:one_day/features/challenge/domain/repositories/verification_repository.dart';
 
 // Events
@@ -52,6 +53,28 @@ class VerificationBloc extends Bloc<VerificationEvent, VerificationState> {
           challengeDescription: event.challengeDescription,
           image: event.image,
         );
+        
+        if (isVerified) {
+          try {
+            print('DEBUG: Uploading verified proof to Supabase...');
+            final supabase = Supabase.instance.client;
+            final fileExt = event.image.path.split('.').last;
+            final fileName = 'proof_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+            
+            await supabase.storage.from('challenge_proofs').upload(
+              fileName,
+              event.image,
+              fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+            );
+            
+            final publicUrl = supabase.storage.from('challenge_proofs').getPublicUrl(fileName);
+            print('DEBUG: Supabase upload SUCCESS! Public URL: $publicUrl');
+          } catch (e) {
+            print('DEBUG: Supabase upload FAILED: $e');
+            // We don't fail the verification if upload fails for now
+          }
+        }
+        
         emit(VerificationSuccess(isVerified));
       } catch (e) {
         emit(VerificationFailure(e.toString()));

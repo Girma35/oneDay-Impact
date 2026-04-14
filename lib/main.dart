@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:one_day/app.dart';
 
 void main() async {
@@ -12,12 +13,11 @@ void main() async {
     debugPrint('Warning: Could not load .env file: $e');
   }
   
-  // Initialize Firebase (uncomment after adding google-services.json)
-  /*
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: dotenv.get('SUPABASE_URL', fallback: 'YOUR_SUPABASE_URL'),
+    anonKey: dotenv.get('SUPABASE_ANON_KEY', fallback: 'YOUR_SUPABASE_ANON_KEY'),
   );
-  */
   
   runApp(const OneDayApp());
 }

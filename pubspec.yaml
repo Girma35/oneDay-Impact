@@ -21,10 +21,6 @@ dependencies:
   injectable: ^2.3.2
   
   # Backend (Firebase)
-  firebase_core: ^4.6.0
-  firebase_auth: ^6.3.0
-  cloud_firestore: ^6.2.0
-  firebase_storage: ^13.2.0
   
   # AI & Networking
   http: ^1.2.1
@@ -43,6 +39,7 @@ dependencies:
   path_provider: ^2.1.1
   image_picker: ^1.0.4
   flutter_dotenv: ^5.1.0
+  supabase_flutter: ^2.12.2
 
 dev_dependencies:
   flutter_test:
