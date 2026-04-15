@@ -1,6 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:one_day/core/di/di.dart';
+import 'package:one_day/core/theme/app_colors.dart';
+import 'package:one_day/core/utils/responsive_utils.dart';
+import 'package:one_day/core/utils/app_refresh_notifier.dart';
+import 'package:one_day/core/utils/icon_utils.dart';
+import 'package:one_day/core/utils/location_service.dart';
+import 'package:one_day/features/profile/domain/entities/user_profile.dart';
+import 'package:one_day/features/profile/domain/repositories/profile_repository.dart';
+import 'package:one_day/features/profile/domain/repositories/achievement_repository.dart';
+import 'package:one_day/features/profile/domain/entities/achievement.dart';
+import 'package:one_day/features/challenge/domain/repositories/completed_challenge_repository.dart';
+import 'package:one_day/features/challenge/domain/entities/completed_challenge.dart';
+import 'package:one_day/features/impact/domain/entities/community_goal.dart';
+import 'package:one_day/features/impact/domain/repositories/impact_repository.dart';
 
 class ImpactPage extends StatelessWidget {
   const ImpactPage({super.key});
@@ -8,36 +22,51 @@ class ImpactPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB), // Very light soft grey background
+      backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildAppBar().animate().fadeIn().slideY(begin: -0.1),
-              const SizedBox(height: 16),
-              _buildHeroLevelCard().animate().fadeIn(delay: 50.ms).slideY(begin: 0.1),
-              const SizedBox(height: 24),
-              _buildMetricsGrid().animate().fadeIn(delay: 150.ms),
-              const SizedBox(height: 24),
-              _buildImpactBreakdown().animate().fadeIn(delay: 250.ms).slideX(begin: -0.05),
-              const SizedBox(height: 24),
-              _buildContributionGrid().animate().fadeIn(delay: 350.ms).slideX(begin: 0.05),
-              const SizedBox(height: 24),
-              _buildGlobalCommunityGoal().animate().fadeIn(delay: 450.ms).slideY(begin: 0.1),
-              const SizedBox(height: 32),
-              _buildAchievements().animate().fadeIn(delay: 550.ms),
-              const SizedBox(height: 32),
-              _buildRecentActivity().animate().fadeIn(delay: 650.ms).slideY(begin: 0.1),
-              const SizedBox(height: 100), // Bottom padding for overlap
-            ],
-          ),
+        child: _ImpactDataLoader(
+          builder: (profile, achievements, completions, breakdown, heatmap, communityGoals, verifiedCount, onRefresh) {
+            return RefreshIndicator(
+              onRefresh: onRefresh,
+              color: AppColors.primaryRed,
+              child: responsiveMaxWidth(
+                child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildAppBar(profile).animate().fadeIn().slideY(begin: -0.1),
+                    const SizedBox(height: 16),
+                    _buildHeroLevelCard(profile).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1),
+                    const SizedBox(height: 24),
+                    _buildMetricsGrid(profile, completions, verifiedCount).animate().fadeIn(delay: 150.ms),
+                    const SizedBox(height: 24),
+                    _buildImpactBreakdown(breakdown).animate().fadeIn(delay: 250.ms).slideX(begin: -0.05),
+                    const SizedBox(height: 24),
+                    _buildContributionGrid(heatmap).animate().fadeIn(delay: 350.ms).slideX(begin: 0.05),
+                    const SizedBox(height: 24),
+                    if (communityGoals.isNotEmpty)
+                      _buildGlobalCommunityGoal(communityGoals.first).animate().fadeIn(delay: 450.ms).slideY(begin: 0.1),
+                    const SizedBox(height: 24),
+                    _buildAchievements(achievements).animate().fadeIn(delay: 550.ms),
+                    const SizedBox(height: 24),
+                    _buildRecentActivity(completions).animate().fadeIn(delay: 650.ms).slideY(begin: 0.1),
+                    const SizedBox(height: 100),
+                  ],
+                ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildAppBar() {
+  Widget _buildAppBar(UserProfile? profile) {
+    final avatarUrl = profile?.avatarUrl ?? 'https://i.pravatar.cc/150?img=11';
+    final locationService = getIt<LocationService>();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
@@ -45,40 +74,58 @@ class ImpactPage extends StatelessWidget {
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 18,
-                backgroundColor: Colors.black,
-                backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                backgroundColor: AppColors.primaryRed,
+                backgroundImage: NetworkImage(avatarUrl),
               ),
               const SizedBox(width: 12),
-              Text(
-                'Bishoftu',
-                style: GoogleFonts.outfit(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  fontStyle: FontStyle.italic,
-                  color: const Color(0xFFC02A24),
-                  letterSpacing: -0.5,
-                ),
+              ListenableBuilder(
+                listenable: locationService,
+                builder: (context, _) {
+                  return Text(
+                    locationService.cityName,
+                    style: GoogleFonts.outfit(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      fontStyle: FontStyle.italic,
+                      color: AppColors.primaryRed,
+                      letterSpacing: -0.5,
+                    ),
+                  );
+                },
               ),
             ],
           ),
-          const Icon(Icons.notifications_rounded, color: Color(0xFF2E3A59), size: 28),
+          Icon(Icons.notifications_rounded, color: AppColors.textSecondary, size: 28),
         ],
       ),
     );
   }
 
-  Widget _buildHeroLevelCard() {
+  Widget _buildHeroLevelCard(UserProfile? profile) {
+    final level = profile?.level ?? 1;
+    final totalXp = profile?.totalXp ?? 0;
+    final rankTitle = profile?.displayRankTitle ?? 'BEGINNER';
+    final avatarUrl = profile?.avatarUrl ?? 'https://i.pravatar.cc/150?img=60';
+
+    // XP progress calculation
+    final xpForCurrentLevel = (level - 1) * (level - 1) * 50;
+    final xpForNextLevel = level * level * 50;
+    final xpInLevel = totalXp - xpForCurrentLevel;
+    final xpNeeded = xpForNextLevel - xpForCurrentLevel;
+    final progressPercent = xpNeeded > 0 ? ((xpInLevel / xpNeeded) * 100).round().clamp(0, 100) : 0;
+    final flexProgress = progressPercent.clamp(1, 99);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: AppColors.primaryRed.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
@@ -94,15 +141,11 @@ class ImpactPage extends StatelessWidget {
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Colors.purpleAccent, Colors.orangeAccent, Colors.yellowAccent],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: AppColors.greenGradient,
                 ),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 46,
-                  backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=60'),
+                  backgroundImage: NetworkImage(avatarUrl),
                 ),
               ),
               Positioned(
@@ -110,16 +153,16 @@ class ImpactPage extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF196127),
+                    color: AppColors.darkGreen,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(color: AppColors.surface, width: 2),
                   ),
                   child: Text(
-                    'ECO-WARRIOR',
+                    rankTitle,
                     style: GoogleFonts.outfit(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: AppColors.surface,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -134,7 +177,7 @@ class ImpactPage extends StatelessWidget {
             style: GoogleFonts.outfit(
               fontSize: 28,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF1E2022),
+              color: AppColors.textPrimary,
               height: 1.1,
               letterSpacing: -1.0,
             ),
@@ -144,27 +187,27 @@ class ImpactPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'LVL 24',
+                'LVL $level',
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: Colors.grey[700],
+                  color: AppColors.textSecondary,
                 ),
               ),
               RichText(
                 text: TextSpan(
-                  style: GoogleFonts.outfit(color: Colors.grey[500]),
+                  style: GoogleFonts.outfit(color: AppColors.textLight),
                   children: [
                     TextSpan(
-                      text: '1,240',
+                      text: formatXp(totalXp),
                       style: GoogleFonts.outfit(
-                        color: const Color(0xFFC02A24),
+                        color: AppColors.primaryRed,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     TextSpan(
-                      text: ' / 2,000 pts',
+                      text: ' / ${formatXp(xpForNextLevel)} pts',
                       style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -177,23 +220,22 @@ class ImpactPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: Container(
               height: 12,
-              color: Colors.grey[200],
+              color: AppColors.divider,
               child: Row(
                 children: [
                   Expanded(
-                    flex: 62,
+                    flex: flexProgress,
                     child: Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFC02A24), Color(0xFFFFA07A)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
+                      decoration: const BoxDecoration(
+                        gradient: AppColors.redGradient,
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(8),
+                          bottomRight: Radius.circular(8),
                         ),
-                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
-                  const Expanded(flex: 38, child: SizedBox()),
+                  Expanded(flex: 100 - flexProgress, child: const SizedBox()),
                 ],
               ),
             ),
@@ -203,7 +245,14 @@ class ImpactPage extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricsGrid() {
+
+
+  Widget _buildMetricsGrid(UserProfile? profile, List<CompletedChallenge> completions, int verifiedCount) {
+    final streak = profile?.streak ?? 0;
+    final bestStreak = profile?.bestStreak ?? 0;
+    final totalXp = profile?.totalXp ?? 0;
+    final verified = verifiedCount;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -213,20 +262,20 @@ class ImpactPage extends StatelessWidget {
               Expanded(
                 child: _buildMetricItem(
                   isPrimary: true,
-                  title: '12 Day',
+                  title: '$streak Day',
                   subtitle: 'STREAK',
                   icon: Icons.local_fire_department_rounded,
-                  iconColor: Colors.white,
+                  iconColor: AppColors.surface,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: _buildMetricItem(
                   isPrimary: false,
-                  title: '45',
+                  title: '$bestStreak',
                   subtitle: 'BEST STREAK',
                   icon: Icons.emoji_events_rounded,
-                  iconColor: const Color(0xFFC02A24),
+                  iconColor: AppColors.primaryRed,
                 ),
               ),
             ],
@@ -237,20 +286,20 @@ class ImpactPage extends StatelessWidget {
               Expanded(
                 child: _buildMetricItem(
                   isPrimary: false,
-                  title: '12.4K',
+                  title: formatXp(totalXp),
                   subtitle: 'TOTAL XP',
                   icon: Icons.stars_rounded,
-                  iconColor: const Color(0xFF6A1B9A),
+                  iconColor: AppColors.darkRed,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: _buildMetricItem(
                   isPrimary: false,
-                  title: '84',
+                  title: '$verified',
                   subtitle: 'VERIFIED',
                   icon: Icons.verified_rounded,
-                  iconColor: const Color(0xFF28853D),
+                  iconColor: AppColors.primaryGreen,
                 ),
               ),
             ],
@@ -270,18 +319,18 @@ class ImpactPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
-        color: isPrimary ? const Color(0xFFB32A15) : Colors.white,
+        color: isPrimary ? AppColors.primaryRed : AppColors.surface,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           if (!isPrimary)
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: AppColors.textPrimary.withValues(alpha: 0.04),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
           if (isPrimary)
             BoxShadow(
-              color: const Color(0xFFB32A15).withOpacity(0.4),
+              color: AppColors.primaryRed.withValues(alpha: 0.35),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -297,7 +346,7 @@ class ImpactPage extends StatelessWidget {
             style: GoogleFonts.outfit(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: isPrimary ? Colors.white : const Color(0xFF1E2022),
+              color: isPrimary ? AppColors.surface : AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 2),
@@ -307,7 +356,7 @@ class ImpactPage extends StatelessWidget {
               fontSize: 10,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.0,
-              color: isPrimary ? Colors.white70 : Colors.grey[500],
+              color: isPrimary ? AppColors.surface.withValues(alpha: 0.7) : AppColors.textLight,
             ),
           ),
         ],
@@ -315,16 +364,56 @@ class ImpactPage extends StatelessWidget {
     );
   }
 
-  Widget _buildImpactBreakdown() {
+  Widget _buildImpactBreakdown(List<ImpactBreakdownEntry> entries) {
+    final displayEntries = entries
+        .map((e) => ImpactBreakdownEntry(
+            category: e.category.toUpperCase(),
+            count: e.count,
+            percentage: e.percentage,
+          ))
+        .toList();
+
+    if (displayEntries.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimary.withValues(alpha: 0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            )
+          ],
+        ),
+        child: Column(
+          children: [
+            Text(
+              'Impact Breakdown',
+              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Complete challenges to see your impact breakdown!',
+              style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textLight),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: AppColors.textPrimary.withValues(alpha: 0.03),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
@@ -335,22 +424,27 @@ class ImpactPage extends StatelessWidget {
         children: [
           Text(
             'Impact Breakdown',
-            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1E2022)),
+            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
           const SizedBox(height: 24),
-          _buildProgressRow('ENVIRONMENTAL', '40%', const Color(0xFF28853D), 0.4),
-          const SizedBox(height: 18),
-          _buildProgressRow('SOCIAL', '25%', const Color(0xFF7B3AF2), 0.25),
-          const SizedBox(height: 18),
-          _buildProgressRow('SELF-CARE', '15%', const Color(0xFFE56A54), 0.15),
-          const SizedBox(height: 18),
-          _buildProgressRow('CIVIC', '10%', Colors.grey[600]!, 0.1),
+          for (int i = 0; i < displayEntries.length; i++) ...[
+            _buildProgressRow(
+              displayEntries[i].category,
+              '${displayEntries[i].percentage.round()}%',
+              categoryColor(displayEntries[i].category),
+              displayEntries[i].percentage / 100,
+            ),
+            if (i < displayEntries.length - 1) const SizedBox(height: 18),
+          ],
         ],
       ),
     );
   }
 
+
+
   Widget _buildProgressRow(String label, String percentStr, Color color, double percent) {
+    final flexValue = (percent * 100).toInt().clamp(1, 99);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -359,11 +453,11 @@ class ImpactPage extends StatelessWidget {
           children: [
             Text(
               label,
-              style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: const Color(0xFF4A4E54)),
+              style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: AppColors.textSecondary),
             ),
             Text(
               percentStr,
-              style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey[600]),
+              style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -372,11 +466,11 @@ class ImpactPage extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           child: Container(
             height: 6,
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha: 0.15),
             child: Row(
               children: [
-                Expanded(flex: (percent * 100).toInt(), child: Container(color: color)),
-                Expanded(flex: 100 - (percent * 100).toInt(), child: const SizedBox()),
+                Expanded(flex: flexValue, child: Container(color: color)),
+                Expanded(flex: 100 - flexValue, child: const SizedBox()),
               ],
             ),
           ),
@@ -385,16 +479,58 @@ class ImpactPage extends StatelessWidget {
     );
   }
 
-  Widget _buildContributionGrid() {
+  Widget _buildContributionGrid(List<ContributionDay> heatmap) {
+    final now = DateTime.now();
+    final gridData = List<int>.generate(70, (_) => 0);
+
+    if (heatmap.isNotEmpty) {
+      for (final day in heatmap) {
+        final diff = now.difference(day.day).inDays;
+        if (diff >= 0 && diff < 70) {
+          gridData[69 - diff] = day.level;
+        }
+      }
+    } else {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimary.withValues(alpha: 0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            )
+          ],
+        ),
+        child: Column(
+          children: [
+            Text(
+              'Contribution Grid',
+              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Complete challenges to build your contribution grid!',
+              style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textLight),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: AppColors.textPrimary.withValues(alpha: 0.03),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
@@ -405,31 +541,28 @@ class ImpactPage extends StatelessWidget {
         children: [
           Text(
             'Contribution Grid',
-            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1E2022)),
+            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
           const SizedBox(height: 20),
-          // Heatmap grid placeholder
           ClipRRect(
             child: GridView.builder(
               padding: EdgeInsets.zero,
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
-              itemCount: 5 * 14, // 5 rows to make it look nicely matched
+              itemCount: 70,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 14,
                 mainAxisSpacing: 6,
                 crossAxisSpacing: 6,
               ),
               itemBuilder: (context, index) {
-                int pattern = [1, 2, 0, 3, 4, 1, 0, 2, 3, 0, 1, 4, 2, 0, 0, 2, 4, 1, 3, 2, 0, 4, 1, 0, 2, 3, 1, 0, 4, 1, 2, 0, 3, 2, 1, 4, 0, 2, 3, 1, 0, 1, 4][index % 43];
                 Color boxColor;
-                switch (pattern) {
-                  case 0: boxColor = Colors.grey[200]!; break;
-                  case 1: boxColor = const Color(0xFFA5D6A7); break;
-                  case 2: boxColor = const Color(0xFF66BB6A); break;
-                  case 3: boxColor = const Color(0xFF43A047); break;
-                  case 4: boxColor = const Color(0xFF1B5E20); break;
-                  default: boxColor = Colors.grey[200]!;
+                switch (gridData[index]) {
+                  case 1: boxColor = AppColors.heatmap1; break;
+                  case 2: boxColor = AppColors.heatmap2; break;
+                  case 3: boxColor = AppColors.heatmap3; break;
+                  case 4: boxColor = AppColors.heatmap4; break;
+                  default:  boxColor = AppColors.heatmap0;
                 }
                 return Container(
                   decoration: BoxDecoration(
@@ -446,24 +579,24 @@ class ImpactPage extends StatelessWidget {
             children: [
               Text(
                 'LESS IMPACT',
-                style: GoogleFonts.outfit(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey[500], letterSpacing: 0.5),
+                style: GoogleFonts.outfit(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.textLight, letterSpacing: 0.5),
               ),
               Row(
                 children: [
-                  _legendBox(Colors.grey[200]!),
+                  _legendBox(AppColors.heatmap0),
                   const SizedBox(width: 4),
-                  _legendBox(const Color(0xFFA5D6A7)),
+                  _legendBox(AppColors.heatmap1),
                   const SizedBox(width: 4),
-                  _legendBox(const Color(0xFF66BB6A)),
+                  _legendBox(AppColors.heatmap2),
                   const SizedBox(width: 4),
-                  _legendBox(const Color(0xFF43A047)),
+                  _legendBox(AppColors.heatmap3),
                   const SizedBox(width: 4),
-                  _legendBox(const Color(0xFF1B5E20)),
+                  _legendBox(AppColors.heatmap4),
                 ],
               ),
               Text(
                 'MORE IMPACT',
-                style: GoogleFonts.outfit(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey[500], letterSpacing: 0.5),
+                style: GoogleFonts.outfit(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.textLight, letterSpacing: 0.5),
               ),
             ],
           )
@@ -483,21 +616,19 @@ class ImpactPage extends StatelessWidget {
     );
   }
 
-  Widget _buildGlobalCommunityGoal() {
+  Widget _buildGlobalCommunityGoal(CommunityGoal goal) {
+    final progressPercent = goal.progressPercent;
+    final flexProgress = progressPercent.clamp(1, 99);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: const Color(0xFF7B3AF2), // Rich purple gradient base
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8B47FA), Color(0xFF6A24E3)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppColors.greenGradient,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF7B3AF2).withOpacity(0.4),
+            color: AppColors.primaryGreen.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
@@ -516,7 +647,7 @@ class ImpactPage extends StatelessWidget {
                   style: GoogleFonts.outfit(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: AppColors.surface,
                     height: 1.1,
                   ),
                 ),
@@ -524,15 +655,15 @@ class ImpactPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4C10A8).withOpacity(0.6),
+                  color: AppColors.darkGreen.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Text(
-                  'You\ncontributed\n1.5%!',
+                  'Join the\neffort!',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.outfit(
                     fontSize: 10,
-                    color: Colors.white,
+                    color: AppColors.surface,
                     fontWeight: FontWeight.bold,
                     height: 1.2,
                   ),
@@ -542,9 +673,9 @@ class ImpactPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Join thousands in our\n10,000 task target',
+            goal.title,
             style: GoogleFonts.outfit(
-              color: Colors.white.withOpacity(0.85),
+              color: AppColors.surface.withValues(alpha: 0.85),
               fontSize: 13,
             ),
           ),
@@ -555,15 +686,15 @@ class ImpactPage extends StatelessWidget {
               Text(
                 'Current Progress',
                 style: GoogleFonts.outfit(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               Text(
-                '7,200 / 10,000',
+                '${formatCount(goal.currentCount)} / ${formatCount(goal.targetCount)}',
                 style: GoogleFonts.outfit(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
@@ -575,28 +706,28 @@ class ImpactPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             child: Container(
               height: 14,
-              color: Colors.white.withOpacity(0.2),
+              color: AppColors.surface.withValues(alpha: 0.2),
               child: Row(
                 children: [
                   Expanded(
-                    flex: 72,
+                    flex: flexProgress,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        '72%',
+                        '$progressPercent%',
                         style: GoogleFonts.outfit(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF7B3AF2),
+                          color: AppColors.primaryGreen,
                         ),
                       ),
                     ),
                   ),
-                  const Expanded(flex: 28, child: SizedBox()),
+                  Expanded(flex: 100 - flexProgress, child: const SizedBox()),
                 ],
               ),
             ),
@@ -606,7 +737,10 @@ class ImpactPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAchievements() {
+
+  Widget _buildAchievements(List<UserAchievement> achievements) {
+    final unlocked = achievements.where((a) => a.id.isNotEmpty).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -617,11 +751,11 @@ class ImpactPage extends StatelessWidget {
             children: [
               Text(
                 'Your Achievements',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1E2022)),
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
               Text(
                 'View All',
-                style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFC02A24)),
+                style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryRed),
               ),
             ],
           ),
@@ -629,32 +763,50 @@ class ImpactPage extends StatelessWidget {
         const SizedBox(height: 16),
         SizedBox(
           height: 140,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            children: [
-              _buildAchievementCard(Icons.wb_sunny_rounded, Colors.orange, 'Early Bird'),
-              const SizedBox(width: 16),
-              _buildAchievementCard(Icons.fitness_center_rounded, const Color(0xFF28853D), 'Weekend\nWarrior'),
-              const SizedBox(width: 16),
-              _buildAchievementCard(Icons.local_florist_rounded, Colors.teal, 'Green\nThumb'),
-            ],
-          ),
+          child: unlocked.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'Complete challenges to unlock achievements!',
+                      style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textLight),
+                    ),
+                  ),
+                )
+              : ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  children: unlocked.take(5).map((ua) {
+                    final ach = ua.achievement;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: _buildAchievementCard(
+                        iconFromName(ach?.iconName ?? 'star'),
+                        colorFromHex(ach?.colorHex ?? '#FF9800'),
+                        ach?.title ?? 'Badge',
+                      ),
+                    );
+                  }).toList(),
+                ),
         ),
       ],
     );
   }
 
+
   Widget _buildAchievementCard(IconData icon, Color color, String title) {
+    // Map any achievement color to red/green/white palette
+    final mappedColor = AppColors.mapToRedGreen(color);
+
     return Container(
       width: 120,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: AppColors.textPrimary.withValues(alpha: 0.04),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -666,10 +818,10 @@ class ImpactPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: mappedColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 28),
+            child: Icon(icon, color: mappedColor, size: 28),
           ),
           const Spacer(),
           Text(
@@ -679,7 +831,7 @@ class ImpactPage extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.w700,
               height: 1.2,
-              color: const Color(0xFF1E2022),
+              color: AppColors.textPrimary,
             ),
           ),
         ],
@@ -687,7 +839,17 @@ class ImpactPage extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentActivity() {
+  Widget _buildRecentActivity(List<CompletedChallenge> completions) {
+    if (completions.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Text(
+          'No recent activity yet. Complete a challenge to get started!',
+          style: GoogleFonts.outfit(fontSize: 14, color: AppColors.textLight),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -695,44 +857,34 @@ class ImpactPage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
             'Recent Activity',
-            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1E2022)),
+            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
         ),
         const SizedBox(height: 16),
-        _buildActivityCard(
-          borderThemeColor: const Color(0xFF28853D),
-          icon: Icons.energy_savings_leaf_rounded,
-          timeLabel: 'TODAY',
-          taskTitle: 'Cleaned local\nstreet',
-          points: '+50\npts',
-        ),
-        const SizedBox(height: 16),
-        _buildActivityCard(
-          borderThemeColor: const Color(0xFF7B3AF2),
-          icon: Icons.volunteer_activism_rounded,
-          timeLabel: 'YESTERDAY',
-          taskTitle: 'Donated books',
-          points: '+80 pts',
-        ),
+        for (int i = 0; i < completions.take(3).length; i++) ...[
+          _buildActivityCardFromCompletion(completions[i]),
+          if (i < 2 && i < completions.length - 1) const SizedBox(height: 16),
+        ],
       ],
     );
   }
 
-  Widget _buildActivityCard({
-    required Color borderThemeColor,
-    required IconData icon,
-    required String timeLabel,
-    required String taskTitle,
-    required String points,
-  }) {
+  Widget _buildActivityCardFromCompletion(CompletedChallenge completion) {
+    final challenge = completion.challenge;
+    final catColor = categoryColor(challenge?.category.name ?? 'ENVIRONMENTAL');
+    final icon = categoryIcon(challenge?.category.name ?? 'ENVIRONMENTAL');
+    final timeLabel = formatTimeLabel(completion.verifiedAt);
+    final taskTitle = challenge?.title ?? 'Challenge';
+    final points = '+${completion.pointsEarned} pts';
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: AppColors.textPrimary.withValues(alpha: 0.03),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -742,7 +894,7 @@ class ImpactPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: Container(
           decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: borderThemeColor, width: 4)),
+            border: Border(left: BorderSide(color: catColor, width: 4)),
           ),
           padding: const EdgeInsets.all(20),
           child: Row(
@@ -750,10 +902,10 @@ class ImpactPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: borderThemeColor.withOpacity(0.12),
+                  color: catColor.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: borderThemeColor, size: 24),
+                child: Icon(icon, color: catColor, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -765,7 +917,7 @@ class ImpactPage extends StatelessWidget {
                       style: GoogleFonts.outfit(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[500],
+                        color: AppColors.textLight,
                         letterSpacing: 1.0,
                       ),
                     ),
@@ -776,7 +928,7 @@ class ImpactPage extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         height: 1.2,
-                        color: const Color(0xFF1E2022),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ],
@@ -789,7 +941,7 @@ class ImpactPage extends StatelessWidget {
                 style: GoogleFonts.outfit(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: borderThemeColor,
+                  color: catColor,
                   height: 1.2,
                 ),
               ),
@@ -797,6 +949,125 @@ class ImpactPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+}
+
+/// Loads all data needed by the ImpactPage from Supabase via DI repositories.
+class _ImpactDataLoader extends StatefulWidget {
+  final Widget Function(
+    UserProfile?,
+    List<UserAchievement>,
+    List<CompletedChallenge>,
+    List<ImpactBreakdownEntry>,
+    List<ContributionDay>,
+    List<CommunityGoal>,
+    int,
+    Future<void> Function(),
+  ) builder;
+
+  const _ImpactDataLoader({required this.builder});
+
+  @override
+  State<_ImpactDataLoader> createState() => _ImpactDataLoaderState();
+}
+
+class _ImpactDataLoaderState extends State<_ImpactDataLoader> {
+  UserProfile? _profile;
+  List<UserAchievement> _achievements = [];
+  List<CompletedChallenge> _completions = [];
+  List<ImpactBreakdownEntry> _breakdown = [];
+  List<ContributionDay> _heatmap = [];
+  List<CommunityGoal> _communityGoals = [];
+  int _verifiedCount = 0;
+  bool _isLoading = true; // Only true on first load
+  bool _isInitialLoad = true;
+  bool _isRefreshing = false; // Guards against concurrent refreshes
+  int _lastRefreshCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+    // Listen for tab-switch refreshes from AppRefreshNotifier
+    getIt<AppRefreshNotifier>().addListener(_onRefreshNotification);
+  }
+
+  @override
+  void dispose() {
+    getIt<AppRefreshNotifier>().removeListener(_onRefreshNotification);
+    super.dispose();
+  }
+
+  void _onRefreshNotification() {
+    final currentCount = getIt<AppRefreshNotifier>().refreshCount;
+    // Only refresh if this is a new notification (not the one that triggered our own load)
+    if (currentCount != _lastRefreshCount && !_isLoading) {
+      _lastRefreshCount = currentCount;
+      _loadData();
+    }
+  }
+
+  Future<void> _loadData() async {
+    if (!mounted || _isRefreshing) return;
+    _isRefreshing = true;
+    // Only show full-screen spinner on the very first load;
+    // subsequent refreshes update data silently in the background.
+    if (_isInitialLoad) {
+      setState(() => _isLoading = true);
+    }
+
+    try {
+      final profileRepo = getIt<ProfileRepository>();
+      final achievementRepo = getIt<AchievementRepository>();
+      final completedRepo = getIt<CompletedChallengeRepository>();
+      final impactRepo = getIt<ImpactRepository>();
+
+      final results = await Future.wait([
+        profileRepo.getCurrentUserProfile(),
+        achievementRepo.getAllWithStatus(),
+        completedRepo.getUserCompletions(limit: 10),
+        impactRepo.getImpactBreakdown(),
+        impactRepo.getContributionHeatmap(days: 70),
+        impactRepo.getActiveCommunityGoals(),
+        completedRepo.getCompletionsCount(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _profile = results[0] as UserProfile?;
+          _achievements = results[1] as List<UserAchievement>;
+          _completions = results[2] as List<CompletedChallenge>;
+          _breakdown = results[3] as List<ImpactBreakdownEntry>;
+          _heatmap = results[4] as List<ContributionDay>;
+          _communityGoals = results[5] as List<CommunityGoal>;
+          _verifiedCount = results[6] as int;
+          _isLoading = false;
+          _isInitialLoad = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('ImpactPage data load error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isInitialLoad = false;
+        });
+      }
+    } finally {
+      _isRefreshing = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return widget.builder(
+      _profile, _achievements, _completions, _breakdown,
+      _heatmap, _communityGoals, _verifiedCount, _loadData,
     );
   }
 }

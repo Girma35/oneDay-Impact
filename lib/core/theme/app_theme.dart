@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:one_day/core/theme/app_colors.dart';
 
 class AppTheme {
-  // Brand Colors
-  static const Color primaryGreen = Color(0xFF2D5A27);
-  static const Color accentOrange = Color(0xFFE67E22);
-  static const Color earthBrown = Color(0xFF795548);
-  static const Color backgroundWhite = Color(0xFFF8F9FA);
-  static const Color deepBlue = Color(0xFF1B263B);
-
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryGreen,
-        primary: primaryGreen,
-        secondary: accentOrange,
-        surface: backgroundWhite,
+        seedColor: AppColors.primaryRed,
+        primary: AppColors.primaryRed,
+        secondary: AppColors.primaryGreen,
+        surface: AppColors.background,
+        error: AppColors.primaryRed,
       ),
       textTheme: GoogleFonts.outfitTextTheme(),
       appBarTheme: const AppBarTheme(
@@ -30,7 +25,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryGreen,
+          backgroundColor: AppColors.primaryRed,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 56),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -44,14 +39,14 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryGreen,
+        seedColor: AppColors.primaryRed,
         brightness: Brightness.dark,
-        primary: primaryGreen,
-        secondary: accentOrange,
+        primary: AppColors.primaryRed,
+        secondary: AppColors.primaryGreen,
         surface: const Color(0xFF121212),
+        error: AppColors.primaryRed,
       ),
       textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
-      // ... more dark theme configuration
     );
   }
 }

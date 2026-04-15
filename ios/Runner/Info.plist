@@ -53,6 +53,12 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>OneDay uses your location to show local challenges and community impact in your area.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>OneDay needs camera access to verify challenge completions.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>OneDay needs photo library access to select verification photos and profile avatars.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

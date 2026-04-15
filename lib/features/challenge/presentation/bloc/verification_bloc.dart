@@ -1,8 +1,10 @@
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:one_day/features/challenge/domain/repositories/verification_repository.dart';
+import 'package:one_day/features/challenge/domain/repositories/completed_challenge_repository.dart';
 
 // Events
 abstract class VerificationEvent extends Equatable {
@@ -11,13 +13,20 @@ abstract class VerificationEvent extends Equatable {
 }
 
 class VerifyChallengeStarted extends VerificationEvent {
+  final String challengeId;
   final String challengeDescription;
-  final File image;
+  final List<String> verificationKeywords;
+  final XFile image;
 
-  VerifyChallengeStarted({required this.challengeDescription, required this.image});
+  VerifyChallengeStarted({
+    required this.challengeId,
+    required this.challengeDescription,
+    required this.verificationKeywords,
+    required this.image,
+  });
 
   @override
-  List<Object?> get props => [challengeDescription, image];
+  List<Object?> get props => [challengeId, challengeDescription, verificationKeywords, image.path];
 }
 
 // States
@@ -44,34 +53,57 @@ class VerificationFailure extends VerificationState {
 // Bloc
 class VerificationBloc extends Bloc<VerificationEvent, VerificationState> {
   final VerificationRepository repository;
+  final CompletedChallengeRepository _completedRepo;
 
-  VerificationBloc({required this.repository}) : super(VerificationInitial()) {
+  VerificationBloc({
+    required this.repository,
+    required CompletedChallengeRepository completedRepo,
+  })  : _completedRepo = completedRepo,
+        super(VerificationInitial()) {
     on<VerifyChallengeStarted>((event, emit) async {
       emit(VerificationLoading());
       try {
         final isVerified = await repository.verifyChallengeCompletion(
           challengeDescription: event.challengeDescription,
+          verificationKeywords: event.verificationKeywords,
           image: event.image,
         );
         
         if (isVerified) {
+          // Upload proof image & record completion in Supabase
+          String? proofUrl;
           try {
-            print('DEBUG: Uploading verified proof to Supabase...');
             final supabase = Supabase.instance.client;
-            final fileExt = event.image.path.split('.').last;
+            final fileExt = event.image.name.contains('.')
+                ? event.image.name.split('.').last
+                : 'jpg';
             final fileName = 'proof_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+            final imageBytes = await event.image.readAsBytes();
             
-            await supabase.storage.from('challenge_proofs').upload(
+            await supabase.storage.from('challenge_proofs').uploadBinary(
               fileName,
-              event.image,
-              fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+              imageBytes,
+              fileOptions: FileOptions(
+                cacheControl: '3600',
+                upsert: true,
+                contentType: event.image.mimeType ?? 'image/jpeg',
+              ),
             );
-            
-            final publicUrl = supabase.storage.from('challenge_proofs').getPublicUrl(fileName);
-            print('DEBUG: Supabase upload SUCCESS! Public URL: $publicUrl');
+            proofUrl = supabase.storage.from('challenge_proofs').getPublicUrl(fileName);
           } catch (e) {
-            print('DEBUG: Supabase upload FAILED: $e');
-            // We don't fail the verification if upload fails for now
+            // Proof upload failed — continue without URL
+            debugPrint('Proof upload failed: $e');
+          }
+
+          // Record the completion via the secure RPC function
+          try {
+            await _completedRepo.completeChallenge(
+              challengeId: event.challengeId,
+              proofImageUrl: proofUrl,
+            );
+          } catch (e) {
+            // Duplicate or other DB error — don't fail the UI
+            debugPrint('Complete challenge recording failed: $e');
           }
         }
         

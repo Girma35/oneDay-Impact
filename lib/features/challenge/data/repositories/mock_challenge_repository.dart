@@ -15,6 +15,7 @@ class MockChallengeRepository implements ChallengeRepository {
         category: ChallengeCategory.environment,
         imageUrl: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09',
         impactPoints: 50,
+        verificationKeywords: ['tree', 'plant', 'soil', 'digging'],
       ),
       const Challenge(
         id: '2',
@@ -23,6 +24,7 @@ class MockChallengeRepository implements ChallengeRepository {
         category: ChallengeCategory.elders,
         imageUrl: 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4',
         impactPoints: 30,
+        verificationKeywords: ['elderly', 'talking', 'neighbor', 'conversation'],
       ),
       const Challenge(
         id: '3',
@@ -31,6 +33,7 @@ class MockChallengeRepository implements ChallengeRepository {
         category: ChallengeCategory.cleanliness,
         imageUrl: 'https://images.unsplash.com/photo-1563132332-1e0214b80021',
         impactPoints: 20,
+        verificationKeywords: ['litter', 'trash', 'street', 'cleanup'],
       ),
     ];
   }

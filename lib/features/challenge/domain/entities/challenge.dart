@@ -16,6 +16,7 @@ class Challenge extends Equatable {
   final ChallengeCategory category;
   final String imageUrl;
   final int impactPoints;
+  final List<String> verificationKeywords;
 
   const Challenge({
     required this.id,
@@ -24,8 +25,9 @@ class Challenge extends Equatable {
     required this.category,
     required this.imageUrl,
     required this.impactPoints,
+    this.verificationKeywords = const [],
   });
 
   @override
-  List<Object?> get props => [id, title, description, category, imageUrl, impactPoints];
+  List<Object?> get props => [id, title, description, category, imageUrl, impactPoints, verificationKeywords];
 }

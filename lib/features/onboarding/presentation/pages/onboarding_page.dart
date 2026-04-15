@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:one_day/core/theme/app_colors.dart';
+import 'package:one_day/core/utils/responsive_utils.dart';
 import 'package:one_day/features/main_page.dart';
 
 class OnboardingPage extends StatelessWidget {
@@ -12,16 +14,17 @@ class OnboardingPage extends StatelessWidget {
         children: [
           // Background Image Placeholder (lake Babogaya or similar)
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black87],
+                colors: [Colors.transparent, AppColors.textPrimary.withValues(alpha: 0.87)],
               ),
             ),
           ),
           SafeArea(
-            child: Padding(
+            child: responsiveMaxWidth(
+              child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,15 +35,15 @@ class OnboardingPage extends StatelessWidget {
                     style: GoogleFonts.outfit(
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: AppColors.surface,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Small daily actions. Massive community impact. Join thousands in Bishoftu making a difference.',
+                    'Small daily actions. Massive community impact. Join thousands making a difference.',
                     style: GoogleFonts.outfit(
                       fontSize: 18,
-                      color: Colors.white.withOpacity(0.9),
+                      color: AppColors.surface.withValues(alpha: 0.9),
                     ),
                   ),
                   const SizedBox(height: 48),
@@ -55,6 +58,7 @@ class OnboardingPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                 ],
+              ),
               ),
             ),
           ),

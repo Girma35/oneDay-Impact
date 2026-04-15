@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:one_day/core/theme/app_colors.dart';
 import 'package:one_day/features/challenge/domain/entities/challenge.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class ChallengeCard extends StatelessWidget {
   final Challenge challenge;
   final VoidCallback onTap;
+  final bool compact;
 
   const ChallengeCard({
     super.key,
     required this.challenge,
     required this.onTap,
+    this.compact = false,
   });
 
   @override
@@ -21,7 +24,7 @@ class ChallengeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppColors.textPrimary.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -36,17 +39,17 @@ class ChallengeCard extends StatelessWidget {
               // Challenge Image
               CachedNetworkImage(
                 imageUrl: challenge.imageUrl,
-                height: 220,
+                height: compact ? 160 : 220,
                 width: double.infinity,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
-                  height: 220,
-                  color: Colors.grey[200],
+                  height: compact ? 160 : 220,
+                  color: AppColors.divider,
                   child: const Center(child: CircularProgressIndicator()),
                 ),
                 errorWidget: (context, url, error) => Container(
-                  height: 220,
-                  color: Colors.grey[300],
+                  height: compact ? 160 : 220,
+                  color: AppColors.divider,
                   child: const Icon(Icons.error),
                 ),
               ),
@@ -60,7 +63,7 @@ class ChallengeCard extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.7),
+                        AppColors.textPrimary.withValues(alpha: 0.7),
                       ],
                     ),
                   ),
@@ -82,7 +85,7 @@ class ChallengeCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.amber,
+                            color: AppColors.primaryRed,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -90,7 +93,7 @@ class ChallengeCard extends StatelessWidget {
                             style: GoogleFonts.outfit(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              color: AppColors.surface,
                             ),
                           ),
                         ),
@@ -100,18 +103,19 @@ class ChallengeCard extends StatelessWidget {
                     Text(
                       challenge.title,
                       style: GoogleFonts.outfit(
-                        fontSize: 22,
+                        fontSize: compact ? 16 : 22,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: AppColors.surface,
                       ),
                     ),
+                    if (!compact)
                     Text(
                       challenge.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.outfit(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
+                        color: AppColors.surface.withValues(alpha: 0.9),
                       ),
                     ),
                   ],
@@ -128,7 +132,7 @@ class ChallengeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: AppColors.surface.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -136,7 +140,7 @@ class ChallengeCard extends StatelessWidget {
         style: GoogleFonts.outfit(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: AppColors.surface,
           letterSpacing: 0.5,
         ),
       ),
