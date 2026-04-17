@@ -1,121 +1,117 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { Compass, BarChart3, User, Leaf } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
+import { getCurrentUserProfile } from './lib/api';
+import { displayRankTitle } from './lib/utils';
+import type { UserProfile } from './types';
+import ChallengeFeed from './pages/ChallengeFeed';
+import ChallengeDetails from './pages/ChallengeDetails';
+import Impact from './pages/Impact';
+import Profile from './pages/Profile';
 
-function App() {
-  const [count, setCount] = useState(0)
+function AppLayout() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      getCurrentUserProfile().then(setProfile).catch(() => {});
+    }
+  }, [user]);
+
+  const displayName = profile?.fullName ?? 'Explorer';
+  const avatarUrl = profile?.avatarUrl ?? 'https://i.pravatar.cc/150?img=11';
+  const rank = profile ? displayRankTitle(profile.rankTitle) : 'BEGINNER';
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app-layout">
+      {/* Desktop Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <Leaf size={28} />
+          OneDay
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
+        <nav className="sidebar-nav">
+          <NavLink to="/explore" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <Compass /> Explore
+          </NavLink>
+          <NavLink to="/impact" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <BarChart3 /> Impact
+          </NavLink>
+          <NavLink to="/profile" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <User /> Profile
+          </NavLink>
+        </nav>
+        <div className="sidebar-user">
+          <img
+            src={avatarUrl}
+            alt=""
+            className="sidebar-user-avatar"
+          />
+          <div>
+            <div className="sidebar-user-name">{displayName}</div>
+            <div className="sidebar-user-rank">{rank}</div>
+          </div>
         </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </aside>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {/* Main Content Area */}
+      <main className="main-content">
+        {/* Mobile Header */}
+        <div className="mobile-header">
+          <div className="mobile-header-title">
+            <Leaf size={18} /> OneDay
+          </div>
+          <div className="mobile-header-right">
+            <img
+              src={avatarUrl}
+              alt=""
+              className="mobile-header-avatar"
+            />
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <Routes>
+          <Route path="/explore" element={<ChallengeFeed />} />
+          <Route path="/challenge/:id" element={<ChallengeDetails />} />
+          <Route path="/impact" element={<Impact />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="*" element={<Navigate to="/explore" replace />} />
+        </Routes>
+      </main>
+
+      {/* Mobile Bottom Nav */}
+      <nav className="mobile-nav">
+        <div className="mobile-nav-inner">
+          <NavLink to="/explore" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+            <Compass size={22} />
+            Explore
+          </NavLink>
+          <NavLink to="/impact" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+            <BarChart3 size={22} />
+            Impact
+          </NavLink>
+          <NavLink to="/profile" className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+            <User size={22} />
+            Profile
+          </NavLink>
+        </div>
+      </nav>
+    </div>
+  );
 }
 
-export default App
+export default function App() {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return <div className="loading-page"><div className="spinner spinner-lg" /></div>;
+  }
+
+  return (
+    <Routes>
+      <Route path="/*" element={<AppLayout />} />
+    </Routes>
+  );
+}

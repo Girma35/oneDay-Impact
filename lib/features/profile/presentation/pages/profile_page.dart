@@ -74,8 +74,6 @@ class ProfilePage extends StatelessWidget {
                     const SizedBox(height: 32),
                     _buildAccountSettings(),
                     const SizedBox(height: 40),
-                    _buildSignOutButton(),
-                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -653,30 +651,6 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildSignOutButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: TextButton(
-        style: TextButton.styleFrom(
-          backgroundColor: AppColors.paleRed,
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-        onPressed: () {},
-        child: Text(
-          'SIGN OUT',
-          style: GoogleFonts.outfit(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2,
-            color: AppColors.primaryRed,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Helper widget that loads profile data, achievements, global rank, and verified count

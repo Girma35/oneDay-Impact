@@ -35,8 +35,8 @@ begin
   insert into public.profiles (id, username, full_name, avatar_url)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1)),
-    coalesce(new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data ->> 'username', split_part(coalesce(new.email, ''), '@', 1), 'explorer_' || substr(new.id::text, 1, 8)),
+    coalesce(new.raw_user_meta_data ->> 'full_name', split_part(coalesce(new.email, ''), '@', 1), 'Explorer'),
     coalesce(new.raw_user_meta_data ->> 'avatar_url', null)
   );
   return new;
